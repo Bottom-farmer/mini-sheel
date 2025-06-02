@@ -1,0 +1,4 @@
+
+menuconfig PKG_USING_MINI_SHEEL
+    bool "mini-sheel for RT-Thread"
+    default n
