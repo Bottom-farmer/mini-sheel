@@ -129,7 +129,7 @@ static void browse_history_up(struct shell_history *history, struct shell_input 
 {
     int i = 0;
 
-    if(history->count == 0 || history->current == 0)
+    if((history->count == 0 || history->current == 0) && input->length != 0)
     {
         return;
     }
@@ -139,7 +139,11 @@ static void browse_history_up(struct shell_history *history, struct shell_input 
         outputchar(outputchar_arg, '\b');
     }
 
-    history->current--;
+    if(history->current != 0)
+    {
+        history->current--;
+    }
+
     xstrcpy(input->buffer, history->history[history->current]);
     input->length = xstrlen(input->buffer);
     input->pos    = input->length;
@@ -164,7 +168,7 @@ static void browse_history_down(struct shell_history *history, struct shell_inpu
 {
     int i = 0;
 
-    if(history->count == 0 || history->current + 1 == history->count)
+    if((history->count == 0 || history->current + 1 == history->count) && input->length != 0)
     {
         return;
     }
@@ -174,7 +178,11 @@ static void browse_history_down(struct shell_history *history, struct shell_inpu
         outputchar(outputchar_arg, '\b');
     }
 
-    history->current++;
+    if(history->current + 1 != history->count)
+    {
+        history->current++;
+    }
+
     xstrcpy(input->buffer, history->history[history->current]);
     input->length = xstrlen(input->buffer);
     input->pos    = input->length;
@@ -296,6 +304,12 @@ static void console_input_char(struct shell_input *input, struct shell_history *
                 save_to_history(history, input->buffer);
                 shell_handle_command(input->buffer);
             }
+
+            for(i = 0; i < CMD_BUF_SIZE; i++)
+            {
+                input->buffer[i] = '\0';
+            }
+
             input->pos       = 0;
             input->length    = 0;
             history->current = history->count;
@@ -394,15 +408,28 @@ static void console_input_char(struct shell_input *input, struct shell_history *
 
         if((ch >= 0x20 && ch <= 0x7E) && (input->length < CMD_BUF_SIZE - 1))
         {
-            xmemmove(&input->buffer[input->pos + 1], &input->buffer[input->pos], input->length - input->pos);
+            xmemmove(&input->buffer[input->pos + 1], &input->buffer[input->pos], input->length - input->pos + 1);
 
             input->buffer[input->pos++] = ch;
             input->length++;
+
             if(input->length > history->max_len)
             {
                 history->max_len = input->length;
             }
-            s_printf("%c", ch);
+
+            if(input->pos < input->length)
+            {
+                s_printf("%s", &input->buffer[input->pos - 1]);
+                for(i = 1; i <= input->length - input->pos; i++)
+                {
+                    s_printf("\b");
+                }
+            }
+            else
+            {
+                s_printf("%c", ch);
+            }
         }
     }
     else if(state == STATE_ESC_RECEIVED)
